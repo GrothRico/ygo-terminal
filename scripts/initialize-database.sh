@@ -1,6 +1,17 @@
 #!/usr/bin/env sh
 
+if [ ! $(which docker) ]; then
+    echo "Need to install docker. Stopping initialization."
+    exit 1
+fi
+
+if [ ! $(which jq) ]; then
+    echo "Need to install jq. Stopping initialization."
+    exit 1
+fi
+
 if [ ! -f "var/data.json" ]; then
+    mkdir -p "var"
     echo "Downloading data"
     echo "================================================"
     curl "https://db.ygoprodeck.com/api/v7/cardinfo.php?language=de" | jq '.data' > var/data.json
