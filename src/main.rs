@@ -2,13 +2,13 @@ use std::io;
 
 use crossterm::event::{self, Event, KeyCode, KeyEvent, KeyEventKind};
 use ratatui::{
-    DefaultTerminal, Frame,
+    DefaultTerminal,
     buffer::Buffer,
     layout::Rect,
     style::Stylize,
     symbols::border,
     text::{Line, Text},
-    widgets::{Block, Paragraph, Widget},
+    widgets::{Block, Paragraph, StatefulWidget, Widget},
 };
 use ratatui_image::{StatefulImage, picker::Picker, protocol::StatefulProtocol};
 
@@ -16,7 +16,7 @@ use ratatui_image::{StatefulImage, picker::Picker, protocol::StatefulProtocol};
 struct App {
     exit: bool,
     counter: CounterWidget,
-    image: TestImage,
+    image: TestImageWidget,
 }
 
 #[derive(Default)]
@@ -25,10 +25,6 @@ struct CounterWidget {
 }
 
 impl CounterWidget {
-    fn draw(&self, frame: &mut Frame) {
-        frame.render_widget(self, frame.area());
-    }
-
     fn decrement_counter(&mut self) {
         self.counter -= 1;
     }
@@ -76,42 +72,40 @@ impl Widget for &CounterWidget {
     }
 }
 
-struct TestImage {
+struct TestImageWidget {
     image: StatefulProtocol,
 }
 
-impl Default for TestImage {
+impl Default for TestImageWidget {
     fn default() -> Self {
         let picker = Picker::from_query_stdio().unwrap();
         let dyn_image = image::ImageReader::open("var/test.jpg")
             .unwrap()
             .decode()
             .unwrap();
-        TestImage {
+        TestImageWidget {
             image: picker.new_resize_protocol(dyn_image),
         }
     }
 }
 
-impl TestImage {
-    fn draw(&mut self, frame: &mut Frame) {
+impl Widget for &mut TestImageWidget {
+    fn render(self, area: Rect, buf: &mut Buffer)
+    where
+        Self: Sized,
+    {
         let image_widget = StatefulImage::default();
-        frame.render_stateful_widget(image_widget, frame.area(), &mut self.image);
+        image_widget.render(area, buf, &mut self.image);
     }
 }
 
 impl App {
-    fn run(&mut self, terminal: &mut DefaultTerminal) -> io::Result<()> {
+    fn run(mut self, terminal: &mut DefaultTerminal) -> io::Result<()> {
         while !self.exit {
-            terminal.draw(|frame| self.draw(frame))?;
+            terminal.draw(|frame| frame.render_widget(&mut self, frame.area()))?;
             self.handle_events()?;
         }
         Ok(())
-    }
-
-    fn draw(&mut self, frame: &mut Frame) {
-        self.counter.draw(frame);
-        self.image.draw(frame);
     }
 
     fn handle_events(&mut self) -> io::Result<()> {
@@ -129,6 +123,16 @@ impl App {
 
     fn exit(&mut self) {
         self.exit = true;
+    }
+}
+
+impl Widget for &mut App {
+    fn render(self, area: Rect, buf: &mut Buffer)
+    where
+        Self: Sized,
+    {
+        self.counter.render(area, buf);
+        self.image.render(area, buf);
     }
 }
 
