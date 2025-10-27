@@ -1,4 +1,4 @@
-use std::io;
+use std::{io, process::exit};
 
 use crossterm::event::{self, Event, KeyCode, KeyEvent, KeyEventKind};
 use ratatui::{
@@ -10,11 +10,29 @@ use ratatui::{
     text::{Line, Text},
     widgets::{Block, Paragraph, Widget},
 };
+use ratatui_image::{StatefulImage, picker::Picker, protocol::StatefulProtocol};
 
-#[derive(Debug, Default)]
 struct App {
     counter: u8,
     exit: bool,
+    image: StatefulProtocol,
+}
+
+impl Default for App {
+    fn default() -> Self {
+        let picker = Picker::from_query_stdio().unwrap();
+        let dyn_image = image::ImageReader::open("var/test.jpg")
+            .unwrap()
+            .decode()
+            .unwrap();
+        let image = picker.new_resize_protocol(dyn_image);
+
+        App {
+            counter: 0,
+            exit: false,
+            image: image,
+        }
+    }
 }
 
 impl App {
@@ -26,8 +44,10 @@ impl App {
         Ok(())
     }
 
-    fn draw(&self, frame: &mut Frame) {
-        frame.render_widget(self, frame.area());
+    fn draw(&mut self, frame: &mut Frame) {
+        let image = StatefulImage::default();
+        frame.render_stateful_widget(image, frame.area(), &mut self.image);
+        // frame.render_widget(self, frame.area());
     }
 
     fn handle_events(&mut self) -> io::Result<()> {
