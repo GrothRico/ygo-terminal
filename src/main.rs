@@ -1,4 +1,4 @@
-use std::{io, process::exit};
+use std::io;
 
 use crossterm::event::{self, Event, KeyCode, KeyEvent, KeyEventKind};
 use ratatui::{
@@ -12,65 +12,21 @@ use ratatui::{
 };
 use ratatui_image::{StatefulImage, picker::Picker, protocol::StatefulProtocol};
 
+#[derive(Default)]
 struct App {
-    counter: u8,
     exit: bool,
-    image: StatefulProtocol,
+    counter: CounterWidget,
+    image: TestImage,
 }
 
-impl Default for App {
-    fn default() -> Self {
-        let picker = Picker::from_query_stdio().unwrap();
-        let dyn_image = image::ImageReader::open("var/test.jpg")
-            .unwrap()
-            .decode()
-            .unwrap();
-        let image = picker.new_resize_protocol(dyn_image);
-
-        App {
-            counter: 0,
-            exit: false,
-            image: image,
-        }
-    }
+#[derive(Default)]
+struct CounterWidget {
+    counter: u8,
 }
 
-impl App {
-    fn run(&mut self, terminal: &mut DefaultTerminal) -> io::Result<()> {
-        while !self.exit {
-            terminal.draw(|frame| self.draw(frame))?;
-            self.handle_events()?;
-        }
-        Ok(())
-    }
-
-    fn draw(&mut self, frame: &mut Frame) {
-        let image = StatefulImage::default();
-        frame.render_stateful_widget(image, frame.area(), &mut self.image);
-        // frame.render_widget(self, frame.area());
-    }
-
-    fn handle_events(&mut self) -> io::Result<()> {
-        match event::read()? {
-            Event::Key(key_event) if key_event.kind == KeyEventKind::Press => {
-                self.handle_key_event(key_event)
-            }
-            _ => {}
-        }
-        Ok(())
-    }
-
-    fn handle_key_event(&mut self, key_event: KeyEvent) {
-        match key_event.code {
-            KeyCode::Char('q') => self.exit(),
-            KeyCode::Left => self.decrement_counter(),
-            KeyCode::Right => self.increment_counter(),
-            _ => {}
-        }
-    }
-
-    fn exit(&mut self) {
-        self.exit = true;
+impl CounterWidget {
+    fn draw(&self, frame: &mut Frame) {
+        frame.render_widget(self, frame.area());
     }
 
     fn decrement_counter(&mut self) {
@@ -80,10 +36,21 @@ impl App {
     fn increment_counter(&mut self) {
         self.counter += 1;
     }
+
+    fn handle_counter_change(&mut self, key_event: KeyEvent) {
+        match key_event.code {
+            KeyCode::Left => self.decrement_counter(),
+            KeyCode::Right => self.increment_counter(),
+            _ => {}
+        }
+    }
 }
 
-impl Widget for &App {
-    fn render(self, area: Rect, buf: &mut Buffer) {
+impl Widget for &CounterWidget {
+    fn render(self, area: Rect, buf: &mut Buffer)
+    where
+        Self: Sized,
+    {
         let title = Line::from(" Counter App Tutorial ".bold());
         let instructions = Line::from(vec![
             " Decrement ".into(),
@@ -106,6 +73,62 @@ impl Widget for &App {
             .centered()
             .block(block)
             .render(area, buf)
+    }
+}
+
+struct TestImage {
+    image: StatefulProtocol,
+}
+
+impl Default for TestImage {
+    fn default() -> Self {
+        let picker = Picker::from_query_stdio().unwrap();
+        let dyn_image = image::ImageReader::open("var/test.jpg")
+            .unwrap()
+            .decode()
+            .unwrap();
+        TestImage {
+            image: picker.new_resize_protocol(dyn_image),
+        }
+    }
+}
+
+impl TestImage {
+    fn draw(&mut self, frame: &mut Frame) {
+        let image_widget = StatefulImage::default();
+        frame.render_stateful_widget(image_widget, frame.area(), &mut self.image);
+    }
+}
+
+impl App {
+    fn run(&mut self, terminal: &mut DefaultTerminal) -> io::Result<()> {
+        while !self.exit {
+            terminal.draw(|frame| self.draw(frame))?;
+            self.handle_events()?;
+        }
+        Ok(())
+    }
+
+    fn draw(&mut self, frame: &mut Frame) {
+        self.counter.draw(frame);
+        self.image.draw(frame);
+    }
+
+    fn handle_events(&mut self) -> io::Result<()> {
+        match event::read()? {
+            Event::Key(key_event) if key_event.kind == KeyEventKind::Press => {
+                match key_event.code {
+                    KeyCode::Char('q') => self.exit(),
+                    _ => self.counter.handle_counter_change(key_event),
+                }
+            }
+            _ => {}
+        }
+        Ok(())
+    }
+
+    fn exit(&mut self) {
+        self.exit = true;
     }
 }
 
