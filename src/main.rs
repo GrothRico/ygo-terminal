@@ -8,7 +8,7 @@ use ratatui::{
     style::Stylize,
     symbols::border,
     text::{Line, Text},
-    widgets::{Block, Paragraph, StatefulWidget, Widget},
+    widgets::{Block, Borders, Paragraph, StatefulWidget, Widget},
 };
 use ratatui_image::{StatefulImage, picker::Picker, protocol::StatefulProtocol};
 
@@ -138,11 +138,16 @@ impl Widget for &mut App {
         Self: Sized,
     {
         let layout = Layout::default()
-            .direction(ratatui::layout::Direction::Vertical)
-            .constraints(vec![Constraint::Percentage(50), Constraint::Percentage(50)])
+            .direction(ratatui::layout::Direction::Horizontal)
+            .constraints(vec![Constraint::Percentage(20), Constraint::Percentage(80)])
             .split(area);
-        self.counter.render(layout[self.rotation], buf);
-        self.image.render(layout[(self.rotation + 1) % 2], buf);
+        // TODO: https://ratatui.rs/examples/widgets/scrollbar/
+        Paragraph::new("Scrollbar")
+            .block(Block::new().borders(Borders::RIGHT))
+            .render(layout[0], buf);
+        Paragraph::new("Playmat")
+            .block(Block::new())
+            .render(layout[1], buf);
     }
 }
 
