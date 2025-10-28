@@ -4,7 +4,7 @@ use crossterm::event::{self, Event, KeyCode, KeyEvent, KeyEventKind};
 use ratatui::{
     DefaultTerminal,
     buffer::Buffer,
-    layout::Rect,
+    layout::{Constraint, Layout, Rect},
     style::Stylize,
     symbols::border,
     text::{Line, Text},
@@ -15,6 +15,7 @@ use ratatui_image::{StatefulImage, picker::Picker, protocol::StatefulProtocol};
 #[derive(Default)]
 struct App {
     exit: bool,
+    rotation: usize,
     counter: CounterWidget,
     image: TestImageWidget,
 }
@@ -113,6 +114,7 @@ impl App {
             Event::Key(key_event) if key_event.kind == KeyEventKind::Press => {
                 match key_event.code {
                     KeyCode::Char('q') => self.exit(),
+                    KeyCode::Char('r') => self.rotate(),
                     _ => self.counter.handle_counter_change(key_event),
                 }
             }
@@ -124,6 +126,10 @@ impl App {
     fn exit(&mut self) {
         self.exit = true;
     }
+
+    fn rotate(&mut self) {
+        self.rotation = (self.rotation + 1) % 2;
+    }
 }
 
 impl Widget for &mut App {
@@ -131,8 +137,12 @@ impl Widget for &mut App {
     where
         Self: Sized,
     {
-        self.counter.render(area, buf);
-        self.image.render(area, buf);
+        let layout = Layout::default()
+            .direction(ratatui::layout::Direction::Vertical)
+            .constraints(vec![Constraint::Percentage(50), Constraint::Percentage(50)])
+            .split(area);
+        self.counter.render(layout[self.rotation], buf);
+        self.image.render(layout[(self.rotation + 1) % 2], buf);
     }
 }
 
