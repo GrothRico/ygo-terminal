@@ -64,12 +64,30 @@ impl Widget for &mut App {
     where
         Self: Sized,
     {
-        let layout = Layout::default()
+        let full_screen = Layout::default()
             .direction(ratatui::layout::Direction::Horizontal)
-            .constraints(vec![Constraint::Percentage(20), Constraint::Percentage(80)])
+            .constraints(vec![Constraint::Percentage(15), Constraint::Percentage(85)])
             .split(area);
-        // TODO: https://ratatui.rs/examples/widgets/scrollbar/
-        DescriptionWidget::default().render(layout[0], buf);
+
+        let description_area = Layout::default()
+            .direction(ratatui::layout::Direction::Vertical)
+            .constraints(vec![
+                Constraint::Percentage(25),
+                Constraint::Percentage(55),
+                Constraint::Percentage(15),
+            ])
+            .split(full_screen[0]);
+
+        TestImageWidget::default().render(description_area[0], buf);
+        DescriptionWidget::default().render(description_area[1], buf);
+        Paragraph::default()
+            .block(
+                Block::bordered()
+                    .gray()
+                    .title("Properties")
+                    .padding(Padding::uniform(1)),
+            )
+            .render(description_area[2], buf);
         Paragraph::default()
             .block(
                 Block::bordered()
@@ -77,7 +95,7 @@ impl Widget for &mut App {
                     .title("Field")
                     .padding(Padding::uniform(1)),
             )
-            .render(layout[1], buf);
+            .render(full_screen[1], buf);
     }
 }
 
