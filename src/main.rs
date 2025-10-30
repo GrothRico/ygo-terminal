@@ -2,13 +2,13 @@ mod widgets;
 
 use widgets::{CounterWidget, DescriptionWidget, TestImageWidget};
 
-use std::{io, vec};
+use std::{io, process::exit, vec};
 
 use crossterm::event::{self, Event, KeyCode, KeyEventKind};
 use ratatui::{
     DefaultTerminal,
     buffer::Buffer,
-    layout::{Constraint, Layout, Rect},
+    layout::{Constraint, Flex, Layout, Rect},
     style::Stylize,
     widgets::{Block, Padding, Paragraph, Widget},
 };
@@ -59,6 +59,14 @@ impl App {
     }
 }
 
+fn center(area: Rect, horizontal: Constraint, vertical: Constraint) -> Rect {
+    let [area] = Layout::horizontal([horizontal])
+        .flex(Flex::Center)
+        .areas(area);
+    let [area] = Layout::vertical([vertical]).flex(Flex::Center).areas(area);
+    area
+}
+
 impl Widget for &mut App {
     fn render(self, area: Rect, buf: &mut Buffer)
     where
@@ -69,16 +77,27 @@ impl Widget for &mut App {
             .constraints(vec![Constraint::Percentage(15), Constraint::Percentage(85)])
             .split(area);
 
-        let description_area = Layout::default()
-            .direction(ratatui::layout::Direction::Vertical)
-            .constraints(vec![
-                Constraint::Percentage(25),
-                Constraint::Percentage(55),
-                Constraint::Percentage(15),
-            ])
-            .split(full_screen[0]);
+        let description_area = Layout::vertical(vec![
+            Constraint::Percentage(25),
+            Constraint::Percentage(60),
+            Constraint::Percentage(15),
+        ])
+        .split(full_screen[0]);
 
-        TestImageWidget::default().render(description_area[0], buf);
+        let test_image = TestImageWidget::default();
+
+        let _image_area_width = description_area[0].width;
+        let _image_area_height = description_area[0].height;
+        let _image_width = test_image.image.width();
+        let _image_height = test_image.image.height();
+
+        let image_area = center(
+            description_area[0],
+            Constraint::Length(test_image.image.width().try_into().unwrap()),
+            Constraint::Length(test_image.image.height().try_into().unwrap()),
+        );
+        test_image.render(image_area, buf);
+
         DescriptionWidget::default().render(description_area[1], buf);
         Paragraph::default()
             .block(

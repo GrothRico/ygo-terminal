@@ -1,31 +1,33 @@
+use image::{DynamicImage, codecs::png::FilterType};
 use ratatui::buffer::Buffer;
-use ratatui::prelude::StatefulWidget;
 use ratatui::widgets::Widget;
-use ratatui_image::{StatefulImage, picker::Picker, protocol::StatefulProtocol};
+use ratatui_image::{FilterType::Lanczos3, Image, Resize, picker::Picker};
 
 pub struct TestImageWidget {
-    pub image: StatefulProtocol,
+    pub image: DynamicImage,
 }
 
 impl Default for TestImageWidget {
     fn default() -> Self {
-        let picker = Picker::from_query_stdio().unwrap();
         let dyn_image = image::ImageReader::open("var/test.jpg")
             .unwrap()
             .decode()
             .unwrap();
-        TestImageWidget {
-            image: picker.new_resize_protocol(dyn_image),
-        }
+
+        TestImageWidget { image: dyn_image }
     }
 }
 
-impl Widget for &mut TestImageWidget {
+impl Widget for TestImageWidget {
     fn render(self, area: ratatui::layout::Rect, buf: &mut Buffer)
     where
         Self: Sized,
     {
-        let image_widget = StatefulImage::default();
-        image_widget.render(area, buf, &mut self.image);
+        let picker = Picker::from_query_stdio().unwrap();
+        let protocol = picker
+            .new_protocol(self.image.clone(), area, Resize::Scale(Some(Lanczos3)))
+            .unwrap();
+        let image = Image::new(&protocol);
+        image.render(area, buf);
     }
 }
