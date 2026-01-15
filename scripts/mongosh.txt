@@ -1,0 +1,1 @@
+db.cards.find().map(x => (x.card_sets ?? []).map(y => ({ code: y.set_code, id: x.id, name: x.name, rarity: y.set_rarity }))).size()
